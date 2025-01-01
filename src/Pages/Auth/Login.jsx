@@ -1,10 +1,12 @@
-import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { loginUser } from "../../redux/actions/authActions";
 import Swal from "sweetalert2";
 
 const Login = () => {
-    const navigate = useNavigate(); 
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
     const [form, setForm] = useState({ email: '', password: '' });
 
     const handleChange = (e) => {
@@ -14,48 +16,17 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        try {
-            const response = await axios.post(
-                'http://demo-api.syaifur.io/api/login',
-                form,
-                { headers: { "Content-Type": "application/json" } }
-            );
-
-            if (response.data.code === 200) {
-                // Ambil token dari response.data.data.token
-                const { token } = response.data.data;
-
-                // Simpan token di localStorage
-                localStorage.setItem('authToken', token);
-
-                Swal.fire({
-                    icon: "success",
-                    title: "Login berhasil cuy",
-                    text: response.data.message
-                });
-
-                setForm({ email: '', password: '' });
-                
-                // Arahkan ke halaman admin
-                navigate('/admin'); 
-            }
-        } catch (error) {
-            Swal.fire({
-                icon: "error",
-                title: "Login gagal cuy",
-                text: error.response?.data?.message || "Terjadi kesalahan pada sistem"
-            });
-
+        const success = await dispatch(loginUser(form));
+        
+        if (success) {
             setForm({ email: '', password: '' });
+            navigate('/admin');
         }
     };
 
     return (
         <div>
-            <div>
-                Halaman Login
-            </div>
+            <div>Halaman Login</div>
             <div>
                 <form onSubmit={handleSubmit}>
                     <div>

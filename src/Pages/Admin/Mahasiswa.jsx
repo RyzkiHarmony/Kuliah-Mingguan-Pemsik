@@ -1,9 +1,18 @@
-import axios from "axios";
+// src/Pages/Admin/Mahasiswa.jsx
+
 import { useEffect, useState } from "react";
-import Swal from "sweetalert2";  // Impor SweetAlert2
+import { useDispatch, useSelector } from 'react-redux';
+import Swal from "sweetalert2";
+import { 
+    fetchMahasiswa, 
+    addMahasiswa, 
+    updateMahasiswa, 
+    deleteMahasiswa 
+} from '../../redux/actions/mahasiswaActions';
 
 const Mahasiswa = () => {
-    const [data, setData] = useState([]);
+    const dispatch = useDispatch();
+    const { data, loading, error } = useSelector(state => state.mahasiswa);
     const [form, setForm] = useState({
         progdi_id: '',
         nim: '',
@@ -11,12 +20,15 @@ const Mahasiswa = () => {
         alamat: '',
         umur: '',
     });
-    const [error, setError] = useState(null);
     const [showModalTambah, setShowModalTambah] = useState(false);
-    const [showModalEdit, setShowModalEdit] = useState(false); // Modal Edit
-    const [selectedId, setSelectedId] = useState(null); // Untuk menyimpan ID yang akan diedit
+    const [showModalEdit, setShowModalEdit] = useState(false);
+    const [selectedId, setSelectedId] = useState(null);
 
     const token = localStorage.getItem('authToken');
+
+    useEffect(() => {
+        dispatch(fetchMahasiswa(token));
+    }, [dispatch, token]);
 
     const handleInput = (e) => {
         const { name, value } = e.target;
@@ -25,48 +37,19 @@ const Mahasiswa = () => {
 
     const handleTambah = async (e) => {
         e.preventDefault();
-        try {
-            const response = await axios.post(
-                'http://demo-api.syaifur.io/api/mahasiswa',
-                form,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            setData([...data, response.data.data]);
+        const success = await dispatch(addMahasiswa(form, token));
+        if (success) {
             setForm({ progdi_id: '', nim: '', nama: '', alamat: '', umur: '' });
             setShowModalTambah(false);
-        } catch (error) {
-            setError(error.response?.data?.message || 'Terjadi kesalahan saat menambahkan data.');
         }
     };
 
     const handleEdit = async (e) => {
         e.preventDefault();
-        try {
-            const response = await axios.put(
-                `http://demo-api.syaifur.io/api/mahasiswa/${selectedId}`,
-                form,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            const updatedData = data.map(item => 
-                item.id === selectedId ? response.data.data : item
-            );
-            setData(updatedData);
+        const success = await dispatch(updateMahasiswa(selectedId, form, token));
+        if (success) {
             setForm({ progdi_id: '', nim: '', nama: '', alamat: '', umur: '' });
             setShowModalEdit(false);
-        } catch (error) {
-            setError(error.response?.data?.message || 'Terjadi kesalahan saat mengedit data.');
         }
     };
 
@@ -80,39 +63,10 @@ const Mahasiswa = () => {
             cancelButtonText: 'Batal dah',
         }).then(async (result) => {
             if (result.isConfirmed) {
-                try {
-                    await axios.delete(`http://demo-api.syaifur.io/api/mahasiswa/${id}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    });
-
-                    setData(data.filter(item => item.id !== id));
-                    Swal.fire('Berhasil Dihapus BANG OMG!', 'Data mahasiswa telah menghilang dari lane.', 'success');
-                } catch (error) {
-                    Swal.fire('Gagal Jir!', 'Terjadi kesalahan saat menghapus data.', 'error');
-                }
+                dispatch(deleteMahasiswa(id, token));
             }
         });
     };
-
-    useEffect(() => {
-        const ambilData = async () => {
-            try {
-                const response = await axios.get('http://demo-api.syaifur.io/api/mahasiswa', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                setData(response.data.data);
-            } catch (error) {
-                setError(error.response?.data?.message || 'Terjadi kesalahan saat mengambil data.');
-            }
-        };
-
-        ambilData();
-    }, [token]);
 
     const handleEditOpen = (item) => {
         setForm({
@@ -125,6 +79,9 @@ const Mahasiswa = () => {
         setSelectedId(item.id);
         setShowModalEdit(true);
     };
+
+    if (loading) return <div className="p-4">Loading...</div>;
+    if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
     return (
         <div className="p-4">
@@ -161,13 +118,13 @@ const Mahasiswa = () => {
                                 <td className="border p-2 text-center">
                                     <button
                                         className="px-2 py-1 bg-yellow-500 text-white rounded mr-2"
-                                        onClick={() => handleEditOpen(item)} // Buka modal edit
+                                        onClick={() => handleEditOpen(item)}
                                     >
                                         Edit
                                     </button>
                                     <button
                                         className="px-2 py-1 bg-red-500 text-white rounded"
-                                        onClick={() => handleDelete(item.id)} // Hapus data
+                                        onClick={() => handleDelete(item.id)}
                                     >
                                         Delete
                                     </button>
@@ -225,7 +182,7 @@ const Mahasiswa = () => {
                                 className="w-full px-4 py-2 border rounded-lg mb-2"
                             />
                             <button
-                                type="batal"
+                                type="button"
                                 className="px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer mr-2"
                                 onClick={() => setShowModalTambah(false)}
                             >
@@ -288,7 +245,7 @@ const Mahasiswa = () => {
                                 className="w-full px-4 py-2 border rounded-lg mb-2"
                             />
                             <button
-                                type="batal"
+                                type="button"
                                 className="px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer mr-2"
                                 onClick={() => setShowModalEdit(false)}
                             >
